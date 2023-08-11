@@ -1,3 +1,4 @@
 {
-	"dotnet.defaultSolution": "trace-context-propagation.sln"
+	"dotnet.defaultSolution": "trace-context-propagation.sln",
+	"msbuildProjectTools.nuget.includePreRelease": true
 }

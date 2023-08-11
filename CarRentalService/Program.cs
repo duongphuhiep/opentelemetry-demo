@@ -17,26 +17,25 @@ builder.Services.AddSwaggerGen();
 
 #region setup OpenTelemetry provider
 
-const string SOURCE_NAME = "Quack.RentalService";
-
-builder.Services.AddOpenTelemetryTracing(b => b
-    .AddAspNetCoreInstrumentation(cfg =>
-        //collect all requests except the requests to the swagger UI
-        cfg.Filter = httpContext => httpContext.Request.Path.Value != null
-                        && !httpContext.Request.Path.Value.Contains("swagger")
-                        && !httpContext.Request.Path.Value.Contains("_framework"))
-    .AddHttpClientInstrumentation()
-    .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(
-                serviceName: "car-rental",
-                serviceVersion: "1.2.0"))
-    .AddSource(SOURCE_NAME)
-    .AddConsoleExporter()
-    .AddOtlpExporter(conf =>
-    {
-        conf.Endpoint = new Uri("http://localhost:4317");
-        conf.ExportProcessorType = OpenTelemetry.ExportProcessorType.Simple;
-        conf.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
-    }));
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(resource => resource
+        .AddService(serviceName: builder.Environment.ApplicationName))
+        .WithTracing(tracing => tracing
+            .AddAspNetCoreInstrumentation(cfg =>
+                //collect all requests except the requests to the swagger UI
+                cfg.Filter = httpContext => httpContext.Request.Path.Value != null
+                            && !httpContext.Request.Path.Value.Contains("swagger")
+                            && !httpContext.Request.Path.Value.Contains("_framework")
+            )
+            .AddConsoleExporter()
+            .AddHttpClientInstrumentation()
+            .AddOtlpExporter(conf =>
+            {
+                conf.Endpoint = new Uri(builder.Configuration.GetValue<string>("OtlpExporterGrpcUri"));
+                conf.ExportProcessorType = OpenTelemetry.ExportProcessorType.Simple;
+                conf.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
+            })
+        );
 
 #endregion
 
@@ -50,11 +49,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
 app.UseAuthorization();
 
-
-ActivitySource MyActivitySource = new(SOURCE_NAME);
+ActivitySource MyActivitySource = new("Quack.RentalService");
 
 app.MapGet("/rentCarWithDetailTelemetry", async () =>
 {

@@ -17,26 +17,25 @@ builder.Services.AddSwaggerGen();
 
 #region setup OpenTelemetry provider
 
-const string SOURCE_NAME = "Quack.BookingService";
-
-builder.Services.AddOpenTelemetryTracing(b => b
-    .AddAspNetCoreInstrumentation(cfg =>
-        //collect all requests except the requests to the swagger UI
-        cfg.Filter = httpContext => httpContext.Request.Path.Value != null
-                        && !httpContext.Request.Path.Value.Contains("swagger")
-                        && !httpContext.Request.Path.Value.Contains("_framework"))
-    .AddHttpClientInstrumentation()
-    .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(
-                serviceName: "booking",
-                serviceVersion: "1.0.1"))
-    .AddSource(SOURCE_NAME)
-    .AddConsoleExporter()
-    .AddOtlpExporter(conf =>
-    {
-        conf.Endpoint = new Uri("http://localhost:4317");
-        conf.ExportProcessorType = OpenTelemetry.ExportProcessorType.Simple;
-        conf.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
-    }));
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(resource => resource
+        .AddService(serviceName: builder.Environment.ApplicationName))
+        .WithTracing(tracing => tracing
+            .AddAspNetCoreInstrumentation(cfg =>
+                //collect all requests except the requests to the swagger UI
+                cfg.Filter = httpContext => httpContext.Request.Path.Value != null
+                            && !httpContext.Request.Path.Value.Contains("swagger")
+                            && !httpContext.Request.Path.Value.Contains("_framework")
+            )
+            .AddConsoleExporter()
+            .AddHttpClientInstrumentation()
+            .AddOtlpExporter(conf =>
+            {
+                conf.Endpoint = new Uri(builder.Configuration.GetValue<string>("OtlpExporterGrpcUri"));
+                conf.ExportProcessorType = OpenTelemetry.ExportProcessorType.Simple;
+                conf.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
+            })
+        );
 
 #endregion
 
@@ -53,16 +52,15 @@ app.UseHttpsRedirection();
 
 app.UseAuthorization();
 
-
-ActivitySource MyActivitySource = new(SOURCE_NAME);
+ActivitySource MyActivitySource = new("Quack.BookService");
 
 app.MapGet("/bookWithDetailTelemetry", async (IConfiguration conf) =>
 {
-    var CarRentalServiceUrl = conf.GetValue<string>("CarRentalServiceUrl");
+    var carRentalServiceUri = conf.GetValue<string>("CarRentalServiceUri");
     var client = new HttpClient();
     using (MyActivitySource.StartActivity("CarRentalService"))
     {
-        await client.GetStringAsync(CarRentalServiceUrl + "/rentCarWithDetailTelemetry");
+        await client.GetStringAsync(carRentalServiceUri + "/rentCarWithDetailTelemetry");
     }
     using (MyActivitySource.StartActivity("Book"))
     {
@@ -73,9 +71,9 @@ app.MapGet("/bookWithDetailTelemetry", async (IConfiguration conf) =>
 
 app.MapGet("/book", async (IConfiguration conf) =>
 {
-    var CarRentalServiceUrl = conf.GetValue<string>("CarRentalServiceUrl");
+    var carRentalServiceUri = conf.GetValue<string>("CarRentalServiceUri");
     var client = new HttpClient();
-    await client.GetStringAsync(CarRentalServiceUrl + "/rentCar");
+    await client.GetStringAsync(carRentalServiceUri + "/rentCar");
     await Task.Delay(200);
     return "Book OK";
 });
