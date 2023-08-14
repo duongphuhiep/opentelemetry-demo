@@ -43,6 +43,11 @@ builder.Host.UseSerilog((hostContext, services, loggerConfig) =>
     loggerConfig.ReadFrom.Configuration(builder.Configuration);
 });
 
+builder.Services.AddHttpLogging(options =>
+{
+    options.LoggingFields = Microsoft.AspNetCore.HttpLogging.HttpLoggingFields.All;
+});
+
 #endregion
 
 var app = builder.Build();
@@ -59,6 +64,7 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 
 app.UseSerilogRequestLogging();
+app.UseHttpLogging();
 
 ActivitySource MyActivitySource = new("Quack.BookService");
 

@@ -46,6 +46,10 @@ builder.Host.UseSerilog((hostContext, services, loggerConfig) =>
 {
     loggerConfig.ReadFrom.Configuration(builder.Configuration);
 });
+builder.Services.AddHttpLogging(options =>
+{
+    options.LoggingFields = Microsoft.AspNetCore.HttpLogging.HttpLoggingFields.All;
+});
 
 #endregion
 
@@ -61,6 +65,7 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseAuthorization();
 app.UseSerilogRequestLogging();
+app.UseHttpLogging();
 
 ActivitySource MyActivitySource = new("Quack.RentalService");
 
