@@ -1,6 +1,7 @@
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using System.Diagnostics;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,7 +14,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-
+builder.Services.AddHttpContextAccessor();
 
 #region setup OpenTelemetry provider
 
@@ -31,11 +32,20 @@ builder.Services.AddOpenTelemetry()
             .AddHttpClientInstrumentation()
             .AddOtlpExporter(conf =>
             {
-                conf.Endpoint = new Uri(builder.Configuration.GetValue<string>("OtlpExporterGrpcUri"));
+                conf.Endpoint = new Uri(builder.Configuration.GetValue<string>("OtlpExporterGrpcUri") ?? "http://localhost:4317");
                 conf.ExportProcessorType = OpenTelemetry.ExportProcessorType.Simple;
                 conf.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
             })
         );
+
+#endregion
+
+#region Configure Serilog
+
+builder.Host.UseSerilog((hostContext, services, loggerConfig) =>
+{
+    loggerConfig.ReadFrom.Configuration(builder.Configuration);
+});
 
 #endregion
 
@@ -53,8 +63,10 @@ app.UseAuthorization();
 
 ActivitySource MyActivitySource = new("Quack.RentalService");
 
-app.MapGet("/rentCarWithDetailTelemetry", async () =>
+app.MapGet("/rentCarWithDetailTelemetry", async (ILoggerFactory loggerFactory) =>
 {
+    var logger = loggerFactory.CreateLogger("G");
+    logger.LogInformation("Start rentCarWithDetailTelemetry");
     var client = new HttpClient();
 
     using (MyActivitySource.StartActivity("GetConfig"))
@@ -74,8 +86,11 @@ app.MapGet("/rentCarWithDetailTelemetry", async () =>
     return "OK";
 });
 
-app.MapGet("/rentCar", async () =>
+app.MapGet("/rentCar", async (ILoggerFactory loggerFactory) =>
 {
+    var logger = loggerFactory.CreateLogger("G");
+    logger.LogInformation("Start rentCar");
+
     var client = new HttpClient();
 
     //GetConfig

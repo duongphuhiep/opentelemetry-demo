@@ -2,7 +2,6 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Serilog;
 using System.Diagnostics;
-using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,7 +10,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-
+builder.Services.AddHttpContextAccessor();
 
 #region setup OpenTelemetry provider
 
@@ -39,13 +38,10 @@ builder.Services.AddOpenTelemetry()
 
 #region Configure Serilog
 
-// // remove default logging providers
-// builder.Logging.ClearProviders();
-
-// // Serilog configuration        
-// var logger = new LoggerConfiguration().ReadFrom.Configuration(builder.Configuration)
-//     .CreateLogger();
-builder.Logging.AddSerilog();
+builder.Host.UseSerilog((hostContext, services, loggerConfig) =>
+{
+    loggerConfig.ReadFrom.Configuration(builder.Configuration);
+});
 
 #endregion
 
