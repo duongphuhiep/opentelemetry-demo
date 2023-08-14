@@ -1,12 +1,10 @@
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using Serilog;
 using System.Diagnostics;
+using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 var builder = WebApplication.CreateBuilder(args);
-
-// download https://www.jaegertracing.io/download/
-// run the server and activate the otlp collector
-// .\jaeger-all-in-one.exe --collector.otlp.enabled=true --collector.otlp.grpc.host-port=:4317  --collector.otlp.http.host-port=:4318
 
 // Add services to the container.
 
@@ -31,11 +29,23 @@ builder.Services.AddOpenTelemetry()
             .AddHttpClientInstrumentation()
             .AddOtlpExporter(conf =>
             {
-                conf.Endpoint = new Uri(builder.Configuration.GetValue<string>("OtlpExporterGrpcUri"));
+                conf.Endpoint = new Uri(builder.Configuration.GetValue<string>("OtlpExporterGrpcUri") ?? "http://localhost:4317");
                 conf.ExportProcessorType = OpenTelemetry.ExportProcessorType.Simple;
                 conf.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
             })
         );
+
+#endregion
+
+#region Configure Serilog
+
+// // remove default logging providers
+// builder.Logging.ClearProviders();
+
+// // Serilog configuration        
+// var logger = new LoggerConfiguration().ReadFrom.Configuration(builder.Configuration)
+//     .CreateLogger();
+builder.Logging.AddSerilog();
 
 #endregion
 
@@ -54,8 +64,10 @@ app.UseAuthorization();
 
 ActivitySource MyActivitySource = new("Quack.BookService");
 
-app.MapGet("/bookWithDetailTelemetry", async (IConfiguration conf) =>
+app.MapGet("/bookWithDetailTelemetry", async (IConfiguration conf, ILoggerFactory loggerFactory) =>
 {
+    var logger = loggerFactory.CreateLogger("G");
+    logger.LogInformation("Start bookWithDetailTelemetry");
     var carRentalServiceUri = conf.GetValue<string>("CarRentalServiceUri");
     var client = new HttpClient();
     using (MyActivitySource.StartActivity("CarRentalService"))
@@ -69,8 +81,10 @@ app.MapGet("/bookWithDetailTelemetry", async (IConfiguration conf) =>
     return "Book OK";
 });
 
-app.MapGet("/book", async (IConfiguration conf) =>
+app.MapGet("/book", async (IConfiguration conf, ILoggerFactory loggerFactory) =>
 {
+    var logger = loggerFactory.CreateLogger("G");
+    logger.LogInformation("Start Book");
     var carRentalServiceUri = conf.GetValue<string>("CarRentalServiceUri");
     var client = new HttpClient();
     await client.GetStringAsync(carRentalServiceUri + "/rentCar");
