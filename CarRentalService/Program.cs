@@ -60,6 +60,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseAuthorization();
+app.UseSerilogRequestLogging();
 
 ActivitySource MyActivitySource = new("Quack.RentalService");
 

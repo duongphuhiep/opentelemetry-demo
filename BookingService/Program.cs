@@ -58,6 +58,8 @@ app.UseHttpsRedirection();
 
 app.UseAuthorization();
 
+app.UseSerilogRequestLogging();
+
 ActivitySource MyActivitySource = new("Quack.BookService");
 
 app.MapGet("/bookWithDetailTelemetry", async (IConfiguration conf, ILoggerFactory loggerFactory) =>
