@@ -2,6 +2,7 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Serilog;
 using System.Diagnostics;
+using CommonLib;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -59,12 +60,16 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseAuthorization();
 
 app.UseSerilogRequestLogging();
 app.UseHttpLogging();
+app.UseHeaderLoggingMiddleware();
 
 ActivitySource MyActivitySource = new("Quack.BookService");
 
@@ -95,5 +100,7 @@ app.MapGet("/book", async (IConfiguration conf, ILoggerFactory loggerFactory) =>
     await Task.Delay(200);
     return "Book OK";
 });
+
+app.MapGet("/ping", () => "pong");
 
 app.Run();

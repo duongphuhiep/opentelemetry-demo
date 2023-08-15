@@ -1,7 +1,15 @@
-GET https://localhost:7217/book
+GET http://localhost:5017/book
 x-correlation-id: 6855c345-fdc4-593e-8894-5a78a9ba2739
 
 ###
 
-GET https://localhost:7217/bookWithDetailTelemetry
+GET https://localhost:7218/bookWithDetailTelemetry
 x-correlation-id: 6855c345-fdc4-593e-8894-5a78a9ba2739
+
+###
+
+GET http://localhost:5017/ping
+x-correlation-id: 6855c345-fdc4-593e-8894-5a78a9ba2739
+foo: barr
+
+###

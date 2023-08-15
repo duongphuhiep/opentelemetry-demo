@@ -2,6 +2,7 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using System.Diagnostics;
 using Serilog;
+using CommonLib;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -61,11 +62,14 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 app.UseAuthorization();
 app.UseSerilogRequestLogging();
 app.UseHttpLogging();
+app.UseHeaderLoggingMiddleware();
 
 ActivitySource MyActivitySource = new("Quack.RentalService");
 
